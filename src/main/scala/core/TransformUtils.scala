@@ -13,9 +13,49 @@ trait TransformUtils extends CategoricContext {
 
   import scala.collection.immutable.ListMap
 
-  def isPeekX(fun: Tree): Boolean = fun.symbol == peekMethodSymbol || fun.symbol == peek2MethodSymbol
-  def isPeek1(fun: Tree): Boolean = fun.symbol == peekMethodSymbol
-  def isPeek2(fun: Tree): Boolean = fun.symbol == peek2MethodSymbol
+  def isSnoopX(fun: Tree): Boolean =
+       fun.symbol == snoop1MethodSymbol || fun.symbol == snoop2MethodSymbol || fun.symbol == snoop3MethodSymbol
+
+  def isSnoop1(fun: Tree): Boolean = fun.symbol == snoop1MethodSymbol
+  def isSnoop2(fun: Tree): Boolean = fun.symbol == snoop2MethodSymbol
+  def isSnoop3(fun: Tree): Boolean = fun.symbol == snoop3MethodSymbol
+
+  def snoopDepth(fun: Tree): Int = {
+    println(s"fun:$fun")
+    if(isSnoop1(fun)) 1
+    else if(isSnoop2(fun)) 2
+    else if(isSnoop3(fun)) 3
+    else -1
+  }
+
+  case class TpeHelper(val tpe: Type) {
+    lazy val normalized = tpe.typeConstructor.normalize
+    lazy val PolyType(params, raw) = normalized
+    lazy val existential = existentialAbstraction(params, raw)
+    def applied(paramTpe: Type) = appliedType(raw, List(paramTpe))
+    lazy val unit = applied(definitions.UnitTpe)
+  }
+
+
+  case class AliasTpe(
+    typeName: TypeName,
+    companionName: TermName,
+    trees: Seq[Tree],
+    constructor: Tree => Tree => Tree,
+    extractor: Tree => Tree,
+    refTpe: TpeHelper
+  ) {
+    def =:=(tpe: Type): Boolean = refTpe.tpe =:= tpe
+
+    def =:=(tpe: TpeHelper): Boolean = refTpe.tpe =:= tpe.tpe
+  }
+
+  def monadStackFromSnoopX(fun: Tree, monadTpeHelpers: List[TpeHelper]): List[TpeHelper] = {
+    val res = monadTpeHelpers.takeRight(snoopDepth(fun))
+    println("monadStackFromSnoopX:"+res)
+    res
+  }
+
 
   def blockToList(tree: Tree): List[Tree] = tree match {
     case Block(stats, expr) => stats :+ expr
@@ -52,7 +92,7 @@ trait TransformUtils extends CategoricContext {
 
 
   object name {
-    val peek          = "peek"
+    val Snoop          = "Snoop"
     val matchRes      = "matchres"
     val ifRes         = "ifres"
     val await         = "await"

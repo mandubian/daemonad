@@ -32,7 +32,6 @@ class Splicer[C <: reflect.macros.Context with Singleton](val c: C) {
     // `changeOwner` as the symbol of the tree of its first argument.
     // Tree attachments would be a more principled approach, but they aren't
     // part of the public API.
-    println("(c.internal.enclosingOwner)="+(c.internal.enclosingOwner))
     val ownerIdent = c.internal.setType(Ident(c.internal.enclosingOwner), typeOf[Any])
     q"_root_.categoric.core.Splicer.changeOwner($ownerIdent, $t)"
   }

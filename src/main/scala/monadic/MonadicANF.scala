@@ -41,13 +41,12 @@ trait MonadicANF extends CategoricANF with TransformUtils {
           def statsExprUnit =
             stats :+ expr :+ api.typecheck(atPos(expr.pos)(Literal(Constant(()))))
           expr match {
-            case q"$fun($arg)" if isPeekX(fun) =>
-              //linearizePeekCall(api, expr, args, tree.pos)
-              //val valDef = defineVal(name.peek, expr, tree.pos)
-              //val sym = gen.mkAttributedStableRef(valDef.symbol).setType(tree.tpe).setPos(tree.pos)
-              symMap.get(arg.symbol) match {
+            case q"$fun($arg)" if isSnoopX(fun) =>
+
+              println("ARG:"+arg.tpe.resultType)
+              /*symMap.get(arg.symbol) match {
                 case None =>
-                  val valDef = defineVal(api)(name.peek, expr, tree.pos)
+                  val valDef = defineVal(api)(name.Snoop, expr, tree.pos)
                   val sym = gen.mkAttributedStableRef(valDef.symbol).setType(tree.tpe).setPos(tree.pos)
                   symMap += (arg.symbol -> (depth, sym))
                   println("NOT FOUND SymMap:"+symMap)
@@ -59,13 +58,18 @@ trait MonadicANF extends CategoricANF with TransformUtils {
                     stats :+ s
                   }
                   else {
-                    val valDef = defineVal(api)(name.peek, expr, tree.pos)
+                    val valDef = defineVal(api)(name.Snoop, expr, tree.pos)
                     val sym = gen.mkAttributedStableRef(valDef.symbol).setType(tree.tpe).setPos(tree.pos)
                     symMap += (arg.symbol -> (depth, sym))
                     println("DEPTH NOT SUP SymMap:"+symMap)
                     stats :+ valDef :+ sym
                   }
-              }
+              }*/
+              val valDef = defineVal(api)(name.Snoop, expr, tree.pos)
+                val sym = gen.mkAttributedStableRef(valDef.symbol).setType(tree.tpe).setPos(tree.pos)
+                symMap += (arg.symbol -> (depth, sym))
+                println("DEPTH NOT SUP SymMap:"+symMap)
+                stats :+ valDef :+ sym
 
             case If(cond, thenp, elsep) =>
               // if type of if-else is Unit don't introduce assignment,
@@ -144,8 +148,8 @@ trait MonadicANF extends CategoricANF with TransformUtils {
         }
 
         def _transformToList(tree: Tree): List[Tree] = trace(tree) {
-          val containsPeek = tree exists isPeekX
-          if (!containsPeek) {
+          val containsSnoop = tree exists isSnoopX
+          if (!containsSnoop) {
             tree match {
               case Block(stats, expr) =>
                 // avoids nested block in `while(await(false)) ...`.
@@ -167,7 +171,7 @@ trait MonadicANF extends CategoricANF with TransformUtils {
               val stats :+ expr1 = linearize.transformToList(expr)
               stats :+ treeCopy.Typed(tree, expr1, tpt)
 
-            case q"$fun[..$targs](...$argss)" if argss.nonEmpty /*&& !isPeekX(fun)*/ =>
+            case q"$fun[..$targs](...$argss)" if argss.nonEmpty /*&& !isSnoopX(fun)*/ =>
               // we can assume that no await call appears in a by-name argument position,
               // this has already been checked.
               val funStats :+ simpleFun = linearize.transformToList(fun)
@@ -220,7 +224,7 @@ trait MonadicANF extends CategoricANF with TransformUtils {
               tree
 
             case ValDef(mods, name, tpt, rhs) =>
-              if (rhs exists isPeekX) {
+              if (rhs exists isSnoopX) {
                 val stats :+ expr = api.atOwner(api.currentOwner.owner)(linearize.transformToList(rhs))
                 stats.foreach(_.changeOwner(api.currentOwner, api.currentOwner.owner))
                 stats :+ treeCopy.ValDef(tree, mods, name, tpt, expr)

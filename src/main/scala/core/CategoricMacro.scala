@@ -14,4 +14,10 @@ abstract class CategoricMacro {
                                        (body: c.Expr[T])
                                        (implicit mw: c.WeakTypeTag[M[_]],
                                                  nw: c.WeakTypeTag[N[_]]): c.Expr[M[N[T]]]
+
+  def blockImpl3[L[_], M[_], N[_], T: c.WeakTypeTag](c: Context)
+                                       (body: c.Expr[T])
+                                       (implicit lw: c.WeakTypeTag[L[_]],
+                                                 mw: c.WeakTypeTag[M[_]],
+                                                 nw: c.WeakTypeTag[N[_]]): c.Expr[L[M[N[T]]]]
 }
