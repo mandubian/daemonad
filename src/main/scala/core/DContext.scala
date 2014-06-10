@@ -1,10 +1,16 @@
-package categoric
+/**
+  * Copyright 2014 Pascal Voitot (@mandubian)
+  *
+  * But deeply inspired by Scala Async project <https://github.com/scala/async>
+  */
+package daemonad
 package core
 
 import scala.reflect.macros.Context
 import scala.reflect.api.Universe
 
-trait CategoricContext {
+
+trait DContext {
 
   val c: Context
 
@@ -16,6 +22,7 @@ trait CategoricContext {
   def snoop1MethodSymbol: Symbol
   def snoop2MethodSymbol: Symbol
   def snoop3MethodSymbol: Symbol
+  def snoop4MethodSymbol: Symbol
 
   // def inferMonadTransformer[M[_], N[_], T]
   //       (api: TypingTransformApi)

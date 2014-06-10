@@ -1,25 +1,36 @@
-package categoric
-package core
+/**
+  * Copyright 2014 Pascal Voitot (@mandubian)
+  *
+  * But deeply inspired by Scala Async project <https://github.com/scala/async>
+  */
+package daemonad
+package monad
 
 import scala.reflect.macros.Context
+import core._
 
-trait MonadicAnalysis extends CategoricAnalysis {
+
+trait MonadAnalysis extends DAnalysis {
 
   import c.universe._
 
+  def reportUnsupportedMonadTpe(monadTpes: List[TpeHelper], tree: Tree, tpe: TpeHelper): Unit
+
   /**
-   * Analyze the contents of an `categoric` block in order to:
+   * Analyze the contents of an `monadic` block in order to:
    * - Report unsupported `Snoop` calls under nested templates, functions, by-name arguments.
    *
    * Must be called on the original tree, not on the ANF transformed tree.
    */
-  override def reportUnsupportedSnoops(tree: Tree, firstDepth: Int): Unit = {
-    val analyzer = new UnsupportedSnoopAnalyzer(firstDepth)
+  override def reportUnsupportedSnoops(monadTpes: List[TpeHelper], tree: Tree): Unit = {
+    val analyzer = new UnsupportedSnoopAnalyzer(monadTpes)
     analyzer.traverse(tree)
     // analyzer.hasUnsupportedSnoops // XB: not used?!
   }
 
-  private class UnsupportedSnoopAnalyzer(firstDepth: Int) extends CategoricTraverser {
+  private class UnsupportedSnoopAnalyzer(monadTpes: List[TpeHelper]) extends DaemonadTraverser {
+    val firstDepth = monadTpes.size
+
     var hasUnsupportedSnoops = false
 
     var firstSnoop: Option[Int] = None
@@ -56,14 +67,16 @@ trait MonadicAnalysis extends CategoricAnalysis {
           reportUnsupportedSnoop(tree, "Snoop must not be used under a try/catch")
           super.traverse(tree)
         case Return(_)                                        =>
-          c.abort(tree.pos, "Snoop must not be used under a return is illegal within a async block")
+          c.abort(tree.pos, "Snoop must not be used under a return is illegal within a monadic block")
         case ValDef(mods, _, _, _) if mods.hasFlag(Flag.LAZY) =>
           // TODO lift this restriction
-          c.abort(tree.pos, "Snoop must not be used under a lazy vals are illegal within an async block")
+          c.abort(tree.pos, "Snoop must not be used under a lazy vals are illegal within an monadic block")
         case CaseDef(_, guard, _) if guard exists isSnoopX     =>
           // TODO lift this restriction
           reportUnsupportedSnoop(tree, "Snoop must not be used under a pattern guard")
-        case q"$fun[..$targs](...$argss)" if isSnoopX(fun) =>
+
+        case q"$fun[..$targs]($arg)" if isSnoopX(fun) =>
+          reportUnsupportedMonadTpe(monadTpes, arg, TpeHelper(arg.tpe))
           if(firstSnoop.isEmpty) {
             val d = snoopDepth(tree)
             if(d < firstDepth) {
@@ -72,9 +85,15 @@ trait MonadicAnalysis extends CategoricAnalysis {
             else { firstSnoop = Some(d) }
           }
           super.traverse(tree)
-        case q"$fun[..$targs](...$argss)" =>
+
+        case q"$mods val $value: $tpt = $arg" if !(arg exists isSnoopX) =>
+          val ttpt = TpeHelper(c.typecheck(tpt, c.TYPEmode).tpe)
+          if(ttpt.asType.typeArgs.size > 1) reportUnsupportedMonadTpe(monadTpes, tree, ttpt)
+          super.traverse(tree)
+
+        /*case q"$fun[..$targs](...$argss)" =>
           super.traverse(fun)
-          argss.map(_.map(super.traverse(_)))
+          argss.map(_.map(super.traverse(_)))*/
         case _ =>
           super.traverse(tree)
       }

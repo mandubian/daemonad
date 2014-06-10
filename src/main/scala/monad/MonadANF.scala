@@ -1,12 +1,18 @@
-package categoric
-package monadic
+/**
+  * Copyright 2014 Pascal Voitot (@mandubian)
+  *
+  * But deeply inspired by Scala Async project <https://github.com/scala/async>
+  */
+package daemonad
+package monad
 
 import scala.Predef._
 import scala.reflect.internal.util.Collections.map2
 
 import core._
 
-trait MonadicANF extends CategoricANF with TransformUtils {
+
+trait MonadANF extends DANF with TransformUtils with PrinterUtils {
 
   import c.universe._
   import Flag._
@@ -23,7 +29,7 @@ trait MonadicANF extends CategoricANF with TransformUtils {
 
     var mode: AnfMode = Anf
 
-    val symMap = scala.collection.mutable.Map[Symbol, (Int, Tree)]()
+    // val symMap = scala.collection.mutable.Map[Symbol, (Int, Tree)]()
 
     var depth: Int = 0
 
@@ -43,7 +49,6 @@ trait MonadicANF extends CategoricANF with TransformUtils {
           expr match {
             case q"$fun($arg)" if isSnoopX(fun) =>
 
-              println("ARG:"+arg.tpe.resultType)
               /*symMap.get(arg.symbol) match {
                 case None =>
                   val valDef = defineVal(api)(name.Snoop, expr, tree.pos)
@@ -66,10 +71,9 @@ trait MonadicANF extends CategoricANF with TransformUtils {
                   }
               }*/
               val valDef = defineVal(api)(name.Snoop, expr, tree.pos)
-                val sym = gen.mkAttributedStableRef(valDef.symbol).setType(tree.tpe).setPos(tree.pos)
-                symMap += (arg.symbol -> (depth, sym))
-                println("DEPTH NOT SUP SymMap:"+symMap)
-                stats :+ valDef :+ sym
+              val sym = gen.mkAttributedStableRef(valDef.symbol).setType(tree.tpe).setPos(tree.pos)
+              // symMap += (arg.symbol -> (depth, sym))
+              stats :+ valDef :+ sym
 
             case If(cond, thenp, elsep) =>
               // if type of if-else is Unit don't introduce assignment,
@@ -77,16 +81,17 @@ trait MonadicANF extends CategoricANF with TransformUtils {
               if (expr.tpe =:= definitions.UnitTpe) {
                 statsExprUnit
               } else {
-                val varDef = defineVar(api)(name.ifRes, expr.tpe, tree.pos)
+                //val varDef = defineVar(api)(name.ifRes, expr.tpe, tree.pos)
                 def branchWithAssign(orig: Tree) = api.typecheck(atPos(orig.pos) {
-                  def cast(t: Tree) = mkAttributedCastPreservingAnnotations(t, tpe(varDef.symbol))
+                  //def cast(t: Tree) = mkAttributedCastPreservingAnnotations(t, tpe(varDef.symbol))
                   orig match {
-                    case Block(thenStats, thenExpr) => Block(thenStats, Assign(Ident(varDef.symbol), cast(thenExpr)))
-                    case _                          => Assign(Ident(varDef.symbol), cast(orig))
+                    case Block(thenStats, thenExpr) => Block(thenStats, thenExpr /*Assign(Ident(varDef.symbol), cast(thenExpr))*/)
+                    case _                          => orig /*Assign(Ident(varDef.symbol), cast(orig))*/
                   }
                 })
-                val ifWithAssign = treeCopy.If(tree, cond, branchWithAssign(thenp), branchWithAssign(elsep)).setType(definitions.UnitTpe)
-                stats :+ varDef :+ ifWithAssign :+ gen.mkAttributedStableRef(varDef.symbol).setType(tree.tpe).setPos(tree.pos)
+                val ifTree = treeCopy.If(tree, cond, branchWithAssign(thenp), branchWithAssign(elsep)).setType(tree.tpe) //.setType(definitions.UnitTpe)
+                val valDef = defineVal(api)(name.ifRes, ifTree, tree.pos)
+                stats :+ valDef :+ gen.mkAttributedStableRef(valDef.symbol).setType(ifTree.tpe).setPos(tree.pos)
               }
 
             case LabelDef(name, params, rhs) =>
@@ -132,9 +137,9 @@ trait MonadicANF extends CategoricANF with TransformUtils {
           indent += 1
           def oneLine(s: Any) = s.toString.replaceAll("""\n""", "\\\\n").take(127)
           try {
-            PrinterUtils.trace(s"${indentString}$prefix(${oneLine(args)})")
+            vtrace(s"${indentString}$prefix(${oneLine(args)})")
             val result = t
-            PrinterUtils.trace(s"${indentString}= ${oneLine(result)}")
+            vtrace(s"${indentString}= ${oneLine(result)}")
             result
           } finally {
             indent -= 1
@@ -182,7 +187,6 @@ trait MonadicANF extends CategoricANF with TransformUtils {
                     linearize.transformToList(expr) match {
                       case stats :+ expr1 =>
                         val valDef = defineVal(api)(argName, expr1, expr1.pos)
-
                         require(valDef.tpe != null, valDef)
                         val stats1 = stats :+ valDef
                         (stats1, atPos(tree.pos.makeTransparent)(gen.stabilize(gen.mkAttributedIdent(valDef.symbol))))
@@ -224,11 +228,11 @@ trait MonadicANF extends CategoricANF with TransformUtils {
               tree
 
             case ValDef(mods, name, tpt, rhs) =>
-              if (rhs exists isSnoopX) {
+              //if (rhs exists isSnoopX) {
                 val stats :+ expr = api.atOwner(api.currentOwner.owner)(linearize.transformToList(rhs))
                 stats.foreach(_.changeOwner(api.currentOwner, api.currentOwner.owner))
                 stats :+ treeCopy.ValDef(tree, mods, name, tpt, expr)
-              } else List(tree)
+              //} else List(tree)
 
             case Assign(lhs, rhs) =>
               val stats :+ expr = linearize.transformToList(rhs)
@@ -254,7 +258,7 @@ trait MonadicANF extends CategoricANF with TransformUtils {
                   val block = linearize.transformToBlock(body)
                   val (valDefs, mappings) = (pat collect {
                     case b@Bind(name, _) =>
-                      val vd = defineVal(api)(name.toTermName + MonadicANF.this.name.bindSuffix, gen.mkAttributedStableRef(b.symbol).setPos(b.pos), b.pos)
+                      val vd = defineVal(api)(name.toTermName + MonadANF.this.name.bindSuffix, gen.mkAttributedStableRef(b.symbol).setPos(b.pos), b.pos)
                       (vd, (b.symbol, vd.symbol))
                   }).unzip
                   val (from, to) = mappings.unzip

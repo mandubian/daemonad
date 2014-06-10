@@ -1,11 +1,17 @@
-package categoric
+/**
+  * Copyright 2014 Pascal Voitot (@mandubian)
+  *
+  * But deeply inspired by Scala Async project <https://github.com/scala/async>
+  */
+package daemonad
+package monad
 package scalaz
 
 import core._
-import categoric.monadic._
+import monad._
 
-trait ScalazMonadicUtils extends MonadicUtils {
-  self: CategoricContext =>
+
+trait ScalazMonadUtils extends MonadUtils with DContext {
 
   import c.universe._
   import c.internal._

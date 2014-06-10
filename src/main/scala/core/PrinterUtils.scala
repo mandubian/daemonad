@@ -1,14 +1,22 @@
-package categoric
+/**
+  * Copyright 2014 Pascal Voitot (@mandubian)
+  *
+  * But simply copied from Scala Async project <https://github.com/scala/async>
+  */
+package daemonad
 package core
 
-object PrinterUtils {
 
-  private def enabled(level: String) = sys.props.getOrElse(s"categoric.$level", "false").equalsIgnoreCase("true")
+trait PrinterUtils {
+
+  private def enabled(level: String) = sys.props.getOrElse(s"daemonad.$level", "false").equalsIgnoreCase("true")
 
   private def verbose = enabled("debug")
   private def trace   = enabled("trace")
 
-  private[categoric] def vprintln(s: => Any): Unit = if (verbose) println(s"[categoric] $s")
+  def vprintln(s: => Any): Unit = {
+    /*if (verbose)*/ println(s"[daemonad] $s")
+  }
 
-  private[categoric] def trace(s: => Any): Unit = if (trace) println(s"[categoric] $s")
+  def vtrace(s: => Any): Unit = if (trace) println(s"[daemonad] $s")
 }

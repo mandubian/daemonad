@@ -6,7 +6,7 @@ resolvers ++= (if (scalaVersion.value.endsWith("SNAPSHOT")) List(Resolver.sonaty
 
 organization := "com.mandubian"
 
-name := "scala-async"
+name := "daemonad"
 
 version := "0.9.1-SNAPSHOT"
 
@@ -25,7 +25,9 @@ scalacOptions in compile ++= Seq("-optimize", "-deprecation", "-unchecked", "-Xl
 
 scalacOptions in Test ++= Seq("-Yrangepos")
 
-javaOptions in console += "-Dscala.async.debug=true"
+scalacOptions in (Test, run) ++= Seq("-Yrangepos", "-Ddaemonad.debug=true")
+
+javaOptions in console += "-Ddaemonad.debug=false"
 
 // Generate $name.properties to store our version as well as the scala version used to build
 resourceGenerators in Compile <+= Def.task {
@@ -43,9 +45,9 @@ mappings in (Compile, packageBin) += {
 }
 
 
-description := "An categorical programming facility for Scala that offers a direct API for working with categories."
+description := "An categorical programming facility for Scala that offers a direct API for working with monad stacks (at least trying)."
 
-homepage := Some(url("http://github.com/mandubian/categoric"))
+homepage := Some(url("http://github.com/mandubian/daemonad"))
 
 startYear := Some(2014)
 
@@ -70,7 +72,7 @@ pomExtra := (
     </developer>
   </developers>
     <scm>
-      <url>git@github.com:scala/async.git/</url>
-      <connection>scm:git:git@github.com:scala/async.git</connection>
+      <url>git@github.com:mandubian/daemonad.git/</url>
+      <connection>scm:git:git@github.com:mandubian/daemonad.git</connection>
     </scm>
   )

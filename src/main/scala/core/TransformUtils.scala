@@ -1,10 +1,16 @@
-package categoric
+/**
+  * Copyright 2014 Pascal Voitot (@mandubian)
+  *
+  * But deeply inspired by Scala Async project <https://github.com/scala/async>
+  */
+package daemonad
 package core
 
 import scala.reflect.macros.Context
 import scala.reflect.api.Universe
 
-trait TransformUtils extends CategoricContext {
+
+trait TransformUtils extends DContext {
 
   import c.universe._
   import c.internal._
@@ -21,19 +27,43 @@ trait TransformUtils extends CategoricContext {
   def isSnoop3(fun: Tree): Boolean = fun.symbol == snoop3MethodSymbol
 
   def snoopDepth(fun: Tree): Int = {
-    println(s"fun:$fun")
     if(isSnoop1(fun)) 1
     else if(isSnoop2(fun)) 2
     else if(isSnoop3(fun)) 3
     else -1
   }
 
+  def monadStackFromSnoopX(fun: Tree, monadTpeHelpers: List[TpeHelper]): List[TpeHelper] = {
+    monadTpeHelpers.takeRight(snoopDepth(fun))
+  }
+
   case class TpeHelper(val tpe: Type) {
-    lazy val normalized = tpe.typeConstructor.normalize
-    lazy val PolyType(params, raw) = normalized
+    lazy val dealias = tpe.dealias
+    lazy val etaExpand = tpe.typeConstructor.etaExpand
+    lazy val PolyType(params, raw) = etaExpand
     lazy val existential = existentialAbstraction(params, raw)
     def applied(paramTpe: Type) = appliedType(raw, List(paramTpe))
+    def applied(paramTpe: TpeHelper) = appliedType(raw, List(paramTpe.tpe))
     lazy val unit = applied(definitions.UnitTpe)
+
+    def =:=(theTpe: Type): Boolean = tpe =:= theTpe
+    def =:=(theTpe: TpeHelper): Boolean = tpe =:= theTpe.tpe
+
+    def <:<(theTpe: Type): Boolean = tpe <:< theTpe
+    def <:<(theTpe: TpeHelper): Boolean = tpe <:< theTpe.tpe
+
+    def asTree: Tree = tq"$tpe"
+    def asType: Type = tpe
+
+    def allTypeArgs: Seq[TpeHelper] = {
+      def step(tpe: TpeHelper): Seq[TpeHelper] = {
+        tpe.tpe.typeArgs.map(TpeHelper(_)) ++ tpe.tpe.typeArgs.flatMap( t => step(TpeHelper(t)))
+      }
+
+      step(this)
+    }
+
+    override def toString = tpe.toString
   }
 
 
@@ -43,19 +73,17 @@ trait TransformUtils extends CategoricContext {
     trees: Seq[Tree],
     constructor: Tree => Tree => Tree,
     extractor: Tree => Tree,
-    refTpe: TpeHelper
+    refTpe: TpeHelper,
+    params: List[TpeHelper],
+    monadParam: TpeHelper
   ) {
     def =:=(tpe: Type): Boolean = refTpe.tpe =:= tpe
 
     def =:=(tpe: TpeHelper): Boolean = refTpe.tpe =:= tpe.tpe
-  }
 
-  def monadStackFromSnoopX(fun: Tree, monadTpeHelpers: List[TpeHelper]): List[TpeHelper] = {
-    val res = monadTpeHelpers.takeRight(snoopDepth(fun))
-    println("monadStackFromSnoopX:"+res)
-    res
+    def sameParams(atpe: AliasTpe): Boolean =
+      (params zip atpe.params).foldLeft(true)( (acc, t) => acc && (t._1 =:= t._2) )
   }
-
 
   def blockToList(tree: Tree): List[Tree] = tree match {
     case Block(stats, expr) => stats :+ expr
@@ -74,9 +102,20 @@ trait TransformUtils extends CategoricContext {
   }
 
   def defineVal(api: TypingTransformApi)(prefix: String, lhs: Tree, pos: Position): ValDef = {
-    val sym = api.currentOwner.newTermSymbol(name.fresh(prefix), pos, SYNTHETIC).setInfo(uncheckedBounds(lhs.tpe))
-    lhs.changeOwner(api.currentOwner, sym)
+    val tpe = lhs.tpe match {
+      // eliminate constant type because not good as an Info
+      case ct: ConstantType => ct.typeSymbol.asType.toType
+      case t => t
+    }
+    val sym = api.currentOwner.newTermSymbol(name.fresh(prefix), pos, SYNTHETIC).setInfo(uncheckedBounds(tpe))
+    //lhs.changeOwner(api.currentOwner, sym)
     valDef(sym, lhs.changeOwner(api.currentOwner, sym)).setType(NoType).setPos(pos)
+  }
+
+  def defineValWithType(api: TypingTransformApi)(prefix: String, lhs: Tree, pos: Position, tpe: Type): ValDef = {
+    val sym = api.currentOwner.newTermSymbol(name.fresh(prefix), pos, SYNTHETIC).setInfo(tpe)
+    //lhs.changeOwner(api.currentOwner, sym)
+    valDef(sym, lhs.changeOwner(api.currentOwner, sym)).setType(tpe).setPos(pos)
   }
 
   def defineParam(api: TypingTransformApi)(prefix: String, pos: Position, tpe: Type): ValDef = {
@@ -85,8 +124,17 @@ trait TransformUtils extends CategoricContext {
   }
 
   def copyVal(api: TypingTransformApi)(tree: Tree, mods: Modifiers, name: Name, tpt: Type, rhs: Tree): ValDef = {
-    val res = treeCopy.ValDef(tree, mods, name, tq"$tpt", rhs)
-    res.setSymbol(tree.symbol.setInfo(tpt))
+    treeCopy.ValDef(tree, mods, name, tq"$tpt", rhs)
+  }
+
+  def copyValChangeTpe(api: TypingTransformApi)(tree: Tree, mods: Modifiers, name: Name, tpt: Type, rhs: Tree): ValDef = {
+    val tpe = rhs.tpe match {
+      // eliminate constant type because not good as an Info
+      case ct: ConstantType => ct.typeSymbol.asType.toType
+      case t => t
+    }
+    val res = treeCopy.ValDef(tree, mods, name, tq"$tpe", rhs) //.setType(tpt)
+    res.setSymbol(tree.symbol.setInfo(tpe))
     res
   }
 
@@ -181,7 +229,7 @@ trait TransformUtils extends CategoricContext {
     * function, or by-name argument is encountered, the descent stops,
     * and `nestedClass` etc are invoked.
     */
-  trait CategoricTraverser extends Traverser {
+  trait DaemonadTraverser extends Traverser {
     def nestedClass(classDef: ClassDef) {
     }
 
@@ -208,6 +256,7 @@ trait TransformUtils extends CategoricContext {
         case fun: Function         => function(fun)
         case m@Match(EmptyTree, _) => patMatFunction(m) // Pattern matching anonymous function under -Xoldpatmat of after `restorePatternMatchingFunctions`
         case q"$fun[..$targs](...$argss)" if argss.nonEmpty =>
+          traverse(fun)
           val isInByName = isByName(fun)
           for ((args, i) <- argss.zipWithIndex) {
             for ((arg, j) <- args.zipWithIndex) {
@@ -215,7 +264,6 @@ trait TransformUtils extends CategoricContext {
               else byNameArgument(arg)
             }
           }
-          traverse(fun)
         case _                     => super.traverse(tree)
       }
     }
@@ -245,6 +293,50 @@ trait TransformUtils extends CategoricContext {
     if (sym.isClass) sym.asClass.thisPrefix
     else NoPrefix
   }
+
+  /*def type2seq(tpe: Type): Seq[Type] = {
+    tpe.dealias.typeArgs match {
+      case List()       => Seq(tpe)
+      case htpe :: ttpes => htpe +: type2seq(htpe) // doesn't care about ttpes
+    }
+  }
+
+  def compareTypes(tpe1: Seq[Type], tpe2: Seq[Type]): Boolean = {
+    (tpe1, tpe2) match {
+      case (h1 :: t1, h2 :: t2) if (h1 =:= h2) => compareTypes(t1, t2)
+      case _ => false
+    }
+  }*/
+
+  def isLastUnit(tpe: Type): Boolean = {
+    def step(tpe: Type): Boolean = {
+      tpe.dealias.typeArgs match {
+        case List()       => tpe =:= definitions.UnitTpe
+        // doesn't care about tail types
+        case head :: _ => step(head)
+      }
+    }
+
+    step(tpe)
+  }
+
+  def appliedTypes(tpes: Seq[TpeHelper]): TpeHelper =
+    tpes match {
+      case List()     => throw new RuntimeException("Can't use appliedTypes on empty type list")
+      case List(tpeh) => tpeh
+      case h :: t     => TpeHelper(appliedType(h.tpe, List(appliedTypes(t).tpe)))
+    }
+
+  def allAppliedTypes(tpes: Seq[TpeHelper]): Seq[TpeHelper] =
+    tpes match {
+      case List()     => throw new RuntimeException("Can't use allAppliedTypes on empty type list")
+      case List(tpeh) => Seq(tpeh)
+      case h :: t     =>
+        val tail = allAppliedTypes(t)
+        TpeHelper(appliedType(h.tpe, List(tail.head.tpe))) +: tail
+
+    }
+
 
   // =====================================
   // Copy/Pasted from Scala 2.10.3. See SI-7694.

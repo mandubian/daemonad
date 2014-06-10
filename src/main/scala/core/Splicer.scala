@@ -1,4 +1,9 @@
-package categoric
+/**
+  * Copyright 2014 Pascal Voitot (@mandubian)
+  *
+  * But deeply inspired by Scala Async project <https://github.com/scala/async>
+  */
+package daemonad
 package core
 
 import scala.reflect.macros.Context
@@ -6,6 +11,12 @@ import scala.reflect.api.Universe
 
 import scala.language.experimental.macros
 
+
+/**
+  * Splicer macro that re-splice the tree in the enclosing context
+  *
+  * Proposed by Jason Zaugg <https://gist.github.com/retronym/10640845>
+  */
 class Splicer[C <: reflect.macros.Context with Singleton](val c: C) {
   /** Safely splice the tree `t` into the enclosing lexical context in which it will
   * be type checked. Rather than directly include `t` in the result, a layer of
@@ -33,7 +44,17 @@ class Splicer[C <: reflect.macros.Context with Singleton](val c: C) {
     // Tree attachments would be a more principled approach, but they aren't
     // part of the public API.
     val ownerIdent = c.internal.setType(Ident(c.internal.enclosingOwner), typeOf[Any])
-    q"_root_.categoric.core.Splicer.changeOwner($ownerIdent, $t)"
+    q"_root_.daemonad.core.Splicer.changeOwner($ownerIdent, $t)"
+  }
+
+  def apply(owner: c.Symbol, t: c.Tree): c.Tree = {
+    import c.universe._
+    // smuggle the symbol of the current enclosing owner through to the
+    // `changeOwner` as the symbol of the tree of its first argument.
+    // Tree attachments would be a more principled approach, but they aren't
+    // part of the public API.
+    val ownerIdent = c.internal.setType(Ident(owner), typeOf[Any])
+    q"_root_.daemonad.core.Splicer.changeOwner($ownerIdent, $t)"
   }
 }
  
