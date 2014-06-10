@@ -8,7 +8,7 @@ organization := "com.mandubian"
 
 name := "daemonad"
 
-version := "0.9.1-SNAPSHOT"
+version := "0.1.0-SNAPSHOT"
 
 libraryDependencies ++= Seq(
   "org.scalaz"      %% "scalaz-core"            % "7.1.0-M6"                      ,
@@ -45,7 +45,7 @@ mappings in (Compile, packageBin) += {
 }
 
 
-description := "An categorical programming facility for Scala that offers a direct API for working with monad stacks (at least trying)."
+description := "A categorical programming facility for Scala that offers a direct API for working with monad & a few monad stacks (at least trying)."
 
 homepage := Some(url("http://github.com/mandubian/daemonad"))
 
