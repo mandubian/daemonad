@@ -25,7 +25,7 @@ class DaemonadExpSpec extends FlatSpec with Matchers {
     override def map[A, B](fa: Future[A])(f: A ⇒ B) = fa map f
   }
 
-  setAll(true)
+  //setAll(true)
 
   case class Toto[+A](a: A)
 
@@ -38,32 +38,22 @@ class DaemonadExpSpec extends FlatSpec with Matchers {
   }
 
 
-  it should """snoop4 on stupid stack""" in {
-    type S[T] = ({ type l[T] = \/[String, T] })#l[T]
+  it should "snoop2 on Future[Option[Int]]" in {
     Await.result(
-      monadic[Future, S, List, Option] {
-        val a: Future[S[List[Option[Int]]]] = Future(\/-(List(Some(5), Some(10))))
-        val b: S[List[Option[Int]]] = \/-(List(Some(1), Some(2)))
-        val c: List[Option[Int]] = List(Some(3), Some(4))
-        val d: Option[Int] = Some(2)
-        (snoop4(a) + snoop3(b) * 2 - snoop2(c)) / snoop1(d)
+      monadic[Future, Option] {
+        val a = Future ( Some(5) )
+        val b = Some(7)
+        val c = 10
+        if(snoop2(a) < 6) snoop1(b) + 3
+        else c
       }, duration.Duration("1 second")
-    ) should equal (\/-(List(Some(2), Some(1), Some(3), Some(2), Some(4), Some(4), Some(5), Some(5))))
+      // monadic[Future, Option] {
+      //   val a: Future[Option[Int]] = Future(Some(10))
+      //   val b: Future[Option[Int]] = Future(None)
+      //   snoop2(a) + snoop2(b)
+      // }, duration.Duration("1 second")
+    ) should equal (Some(10))
   }
-
-  // it should "snoop2 on Future[Option[Int]] with if/then/else" in {
-  //   Await.result(
-  //     monadic[Future, Option] {
-  //       val a = Future(Some(10))
-  //       val b = Future(Some(8))
-  //       val c = Future(Some(6))
-  //       val a1 = snoop2(a)
-  //       val b1 = snoop2(b)
-  //       if(a1 < snoop2(c)) b1 + snoop2(a)
-  //       else snoop2(a)
-  //     }, duration.Duration("1 second")
-  //   ) should equal (Some(10))
-  // }
 
 
   // "Daemonad" should "accept case/match" in {

@@ -54,11 +54,6 @@ trait ScalazMonadUtils extends MonadUtils with DContext {
   }
 
   override def monadTMap(mType: Type, from: Type, to: Type, constructor: Tree => Tree, extractor: Tree => Tree)(fa: Tree)(fn: Tree): Tree = {
-    //val TypeDef(_, sym, _, _) = mType
-    /*val tree = q"""
-      implicitly[$mType].map(${constructor(fa)})($fn)
-    """*/
-
     val tree = q"""
       ${constructor(fa)}.map($fn)
     """
@@ -67,23 +62,12 @@ trait ScalazMonadUtils extends MonadUtils with DContext {
   }
 
   override def monadTMap(from: Type, to: Type, constructor: Tree => Tree)(fa: Tree)(fn: Tree): Tree = {
-    //val TypeDef(_, sym, _, _) = mType
-    /*val tree = q"""
-      $impl.map(${constructor(fa)})($fn)
-    """*/
-
-    val tree = q"""
+    q"""
       ${constructor(fa)}.map($fn)
     """
-    tree
-    //extractor(tree)
   }
 
   override def monadTBind(mType: Type, from: Type, to: Type, constructor: Tree => Tree, extractor: Tree => Tree)(fa: Tree)(fn: Tree): Tree = {
-    //val TypeDef(_, sym, _, _) = mType
-    /*val tree = q"""
-      implicitly[$mType].bind(${constructor(fa)})($fn)
-    """*/
     val tree = q"""
       ${constructor(fa)}.flatMap($fn)
     """
@@ -91,15 +75,10 @@ trait ScalazMonadUtils extends MonadUtils with DContext {
   }
 
   override def monadTBind(from: Type, to: Type, constructor: Tree => Tree)(fa: Tree)(fn: Tree): Tree = {
-    //val TypeDef(_, sym, _, _) = mType
-    /*val tree = q"""
-      $impl.bind(${constructor(fa)})($fn)
-    """*/
     val tree = q"""
       ${constructor(fa)}.flatMap($fn)
     """
     tree
-    //extractor(tree)
   }
 
 }
