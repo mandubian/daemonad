@@ -44,11 +44,11 @@ I had investigated [ScalaAsync](https://github.com/scala/async) code and thought
 > So for now, it can manage Future/Option/List stacks & also \/ using type aliases.
 
 <br/>
-### 3 - Mark monadic blocks
+### 3 - Explicitly Mark monadic blocks
 
 There are 2 ways of seeing monads:
 
-1. You don't need or you don't want to know what is a monad...
+1. **You don't need or you don't want to know what is a monad...**
 
 ... Yet you use it everyday/everywhere.
 
@@ -56,7 +56,7 @@ This is what most of us do using those cool `map/flatMap` functions provided by 
 That's enough for you need in your everyday life, right?
 
 
-2. You want to know or you know what is a monad ...
+2. **You want to know or you know what is a monad ...**
 
 ... You want to use them on purpose.
 
