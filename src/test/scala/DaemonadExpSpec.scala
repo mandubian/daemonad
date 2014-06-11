@@ -25,9 +25,9 @@ class DaemonadExpSpec extends FlatSpec with Matchers {
     override def map[A, B](fa: Future[A])(f: A ⇒ B) = fa map f
   }
 
-  //setAll(true)
+  setAll(true)
 
-  case class Toto[A](a: A)
+  case class Toto[+A](a: A)
 
   implicit object TotoMonad extends Monad[Toto] {
     def bind[A, B](fa: Toto[A])(f: A => Toto[B]): Toto[B] = {
@@ -37,14 +37,13 @@ class DaemonadExpSpec extends FlatSpec with Matchers {
     def point[A](a: => A): Toto[A] = Toto(a)
   }
 
-  it should "accept int in if/then/else" in {
-    Await.result(
-      monadic[Future, Toto, Option] {
-        val a = Toto(Some(5))
-        if(snoop3(a) < 6) 5
+  it should "accept custom monad with OptionT" in {
+    List(Toto(Some(5)), Toto(Some(10))) map { toto =>
+      monadic[Toto, Option] {
+        if(snoop2(toto) < 6) 5
         else 10
-      }, duration.Duration("1 second")
-    ) should equal (List(Some(5), Some(10)))
+      }
+    } should equal (Toto(Some(5)))
   }
 
 
