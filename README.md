@@ -28,14 +28,14 @@ Await.result(
 <br/>
 ## Motivations
 
-### 1 - Experiment writing a very ugly Scala macro
+### Experiment writing a very ugly Scala macro
 
 I wanted to write a huge & complex Scala macro to know the difficulties that it implies.
 
 > Result: I was quite insane and I will certainly write a post-mortem article about it to show the horrible difficulties I've encountered.
 
-<br/>
-### 2 - Investigate ScalaAsync generalization to all monads + (some) monad stacks
+
+### Investigate ScalaAsync generalization to all monads + (some) monad stacks
 
 I had investigated [ScalaAsync](https://github.com/scala/async) code and thought it would be possible to generalize it to all kinds of monads and go further by managing monad stacks.
 
