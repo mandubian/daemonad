@@ -1,10 +1,10 @@
-# Daemonad: snoop into (some) monad stacks with Scala macros
+Summon Daemonad & snoop into monad stacks with Scala macros
 
 `Daemonad` is a nasty Scala macro that aims at:
 
 - marking where you manipulate monads or stacks of monads
 - compile-checking monadic behavior & implicit monad instances
-- allowing to `snoop` monad values even in depth in the same way as `ScalaAsync` i.e. in a pseudo-imperative way.
+- allowing to `snoop` monad values deep into (some) monad stacks in the same way as `ScalaAsync` i.e. in a pseudo-imperative way.
 
 > This project is NOT yet stable, NOT very robust so use it at your own risks.
 
