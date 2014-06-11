@@ -20,16 +20,18 @@ trait TransformUtils extends DContext {
   import scala.collection.immutable.ListMap
 
   def isSnoopX(fun: Tree): Boolean =
-       fun.symbol == snoop1MethodSymbol || fun.symbol == snoop2MethodSymbol || fun.symbol == snoop3MethodSymbol
+       fun.symbol == snoop1MethodSymbol || fun.symbol == snoop2MethodSymbol || fun.symbol == snoop3MethodSymbol || fun.symbol == snoop4MethodSymbol
 
   def isSnoop1(fun: Tree): Boolean = fun.symbol == snoop1MethodSymbol
   def isSnoop2(fun: Tree): Boolean = fun.symbol == snoop2MethodSymbol
   def isSnoop3(fun: Tree): Boolean = fun.symbol == snoop3MethodSymbol
+  def isSnoop4(fun: Tree): Boolean = fun.symbol == snoop4MethodSymbol
 
   def snoopDepth(fun: Tree): Int = {
     if(isSnoop1(fun)) 1
     else if(isSnoop2(fun)) 2
     else if(isSnoop3(fun)) 3
+    else if(isSnoop4(fun)) 4
     else -1
   }
 

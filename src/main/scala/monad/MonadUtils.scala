@@ -58,7 +58,13 @@ trait MonadUpstack extends DContext with MonadUtils {
           // TPE <:< M
           if(tpe <:< stpe.existential) true
           // TPE =!= M
-          else false
+          else {
+            // TPE is simple type => upstack
+            if(tpe.tpe.typeArgs.isEmpty && !stpe.tpe.typeArgs.isEmpty) true
+            // else nothing can be done
+            else true
+          }
+
 
         // M[T]
         case htpe :: ttpe :: Nil =>
@@ -70,7 +76,9 @@ trait MonadUpstack extends DContext with MonadUtils {
           // TPE <:< T
           else if(tpe <:< ttpe.existential) true
           // TPE =!= M[T]
-          else false
+          else {
+            step(ttpe :: Nil, tpe)
+          }
 
         // M[N[...]]
         case htpe :: ttpes =>

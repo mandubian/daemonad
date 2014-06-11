@@ -231,7 +231,7 @@ class DaemonadSpec extends FlatSpec with Matchers {
     ) should equal (List(Some(5), Some(9)))
   }
 
-  case class Toto[A](a: A)
+  case class Toto[+A](a: A)
 
   implicit object TotoMonad extends Monad[Toto] {
     def bind[A, B](fa: Toto[A])(f: A => Toto[B]): Toto[B] = {
@@ -271,6 +271,14 @@ class DaemonadSpec extends FlatSpec with Matchers {
     } should equal (Toto(None))
   }
 
+  it should "accept custom monad with OptionT" in {
+    List(Toto(Some(5)), Toto(Some(10))) map { toto =>
+      monadic[Toto, Option] {
+        if(snoop2(toto) < 6) 5
+        else 10
+      }
+    } should equal (Toto(Some(5)))
+  }
 
   import daemonad.TestUtils._
 

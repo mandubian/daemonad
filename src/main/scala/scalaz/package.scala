@@ -27,9 +27,9 @@ package object `scalaz` {
   def snoop2[M[_], N[_], T](snoopable: M[N[T]]): T = ???
 
   @compileTimeOnly("`snoop3` must be enclosed in a `monadic` block")
-  def snoop3[L[_], M[_], N[_], T](snoopable: L[M[N[T]]]): T = ???
+  def snoop3[M[_], N[_], O[_], T](snoopable: M[N[O[T]]]): T = ???
 
   @compileTimeOnly("`snoop4` must be enclosed in a `monadic` block")
-  def snoop4[L[_], M[_], N[_], T](snoopable: L[M[N[T]]]): T = ???
+  def snoop4[M[_], N[_], O[_], P[_], T](snoopable: M[N[O[P[T]]]]): T = ???
 
 }

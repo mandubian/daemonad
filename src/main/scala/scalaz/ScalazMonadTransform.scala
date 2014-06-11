@@ -49,16 +49,28 @@ trait ScalazMonadTransform extends MonadTransform with ScalazMonadUtils with Sca
     (monadTClean, tq"${monadTRaw.typeSymbol}[${mtpe.typeSymbol}, $tname]")
   }
 
+  private def aliasSymbol(api: TypingTransformApi, tpe: TpeHelper): TypeSymbol = {
+    tpe.tpe match {
+      case TypeRef(prefix, sym, args) =>
+        sym.asType
+      case tpe => tpe.typeSymbol.asType
+    }
+
+  }
+
   private def buildMonadTypeAlias(api: TypingTransformApi, monadTTpe: Type, mtpe: TpeHelper, innerTpe: Type): (TypeName, TermName, Tree) = {
     val nm = c.fresh(monadTTpe.typeSymbol.name.decodedName.toString)
     val typeName = newTypeName(nm)
     val termName = newTermName(nm)
     //val sym = newTypeSymbol(api.currentOwner, typeName).setInfo(typeBounds(definitions.NothingTpe, definitions.AnyTpe))
 
+    // Forces to keep aliased type symbol and not underlying one
+    val aliasedSym = aliasSymbol(api, mtpe)
+
     val tree = q"""{
       type $typeName[T] = ${monadTTpe.typeSymbol}[${mtpe.tpe}, T]
       object $termName {
-        def apply[T](t: ${mtpe.tpe.typeSymbol}[${innerTpe.typeSymbol}[T]]): $typeName[T] = 
+        def apply[T](t: ${aliasedSym}[${innerTpe.typeSymbol}[T]]): $typeName[T] = 
           ${monadTTpe.typeSymbol.companion}.apply[${mtpe.tpe}, T](t)
       }
     }"""
@@ -256,7 +268,7 @@ trait ScalazMonadTransform extends MonadTransform with ScalazMonadUtils with Sca
               val ttpe = tq"${ntpe.tpe.typeSymbol}[$tpe]"
               q"""${aliasName}[$tpe](${tailConstr(ttpe)(t)})"""
             }
-            val extr = (t: Tree) => tailExtr(q"$t.run")
+            val extr = (t: Tree) => tailExtr(q"$t.underlying")
 
             val aliasTpe = AliasTpe(aliasType, aliasName, tailAliasTrees ++ blockToList(aliasTrees), constr, extr, ntpe, List(), resultTpe)
             knownAliasTpes += aliasTpe

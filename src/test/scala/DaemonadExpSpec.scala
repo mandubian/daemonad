@@ -37,15 +37,19 @@ class DaemonadExpSpec extends FlatSpec with Matchers {
     def point[A](a: => A): Toto[A] = Toto(a)
   }
 
-  it should "accept custom monad with OptionT" in {
-    List(Toto(Some(5)), Toto(Some(10))) map { toto =>
-      monadic[Toto, Option] {
-        if(snoop2(toto) < 6) 5
-        else 10
-      }
-    } should equal (Toto(Some(5)))
-  }
 
+  it should """snoop4 on stupid stack""" in {
+    type S[T] = ({ type l[T] = \/[String, T] })#l[T]
+    Await.result(
+      monadic[Future, S, List, Option] {
+        val a: Future[S[List[Option[Int]]]] = Future(\/-(List(Some(5), Some(10))))
+        val b: S[List[Option[Int]]] = \/-(List(Some(1), Some(2)))
+        val c: List[Option[Int]] = List(Some(3), Some(4))
+        val d: Option[Int] = Some(2)
+        (snoop4(a) + snoop3(b) * 2 - snoop2(c)) / snoop1(d)
+      }, duration.Duration("1 second")
+    ) should equal (\/-(List(Some(2), Some(1), Some(3), Some(2), Some(4), Some(4), Some(5), Some(5))))
+  }
 
   // it should "snoop2 on Future[Option[Int]] with if/then/else" in {
   //   Await.result(

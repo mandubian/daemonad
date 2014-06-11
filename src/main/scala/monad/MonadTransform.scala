@@ -93,7 +93,7 @@ trait MonadTransform
 
             val (monadTree, code, ib) = {
               val upstacked = upstack((tpeStack :+ ttpt), innerBlock)
-              vprintln(s"-----> upstacked:"+upstacked + "   --- innerBlock:"+innerBlock+ "    --- innerBlock.tpe:"+innerBlock.tpe)
+              //vprintln(s"-----> upstacked:"+upstacked + "   --- innerBlock:"+innerBlock+ "    --- innerBlock.tpe:"+innerBlock.tpe)
               upstacked match {
                 // NOT UPSTACKABLE AT ALL
                 case Some(EmptyTree) =>
