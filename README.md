@@ -1,4 +1,4 @@
-Summon Daemonad & snoop into monad stacks with Scala macros
+# Summon Daemonad & snoop into monad stacks with Scala macros
 
 `Daemonad` is a nasty Scala macro that aims at:
 
