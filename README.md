@@ -48,17 +48,17 @@ I had investigated [ScalaAsync](https://github.com/scala/async) code and thought
 
 There are 2 ways of seeing monads:
 
-1. **You don't need or you don't want to know what is a monad...**
+#### You don't need or you don't want to know what is a monad...
 
-... Yet you use it everyday/everywhere.
+**... And yet you use it everyday/everywhere.**
 
 This is what most of us do using those cool `map/flatMap` functions provided by Scala libraries that allow to access the values inside `Future`, `List`, `Option` in a _protected_ way etc...
 That's enough for you need in your everyday life, right?
 
 
-2. **You want to know or you know what is a monad ...**
+#### You want to know or you know what is a monad ...
 
-... You want to use them on purpose.
+**... and you want to use them on purpose.**
 
 This is what _hippy developers_ do in advanced Scala using Scalaz or even crazier in pure FP languages like Haskell.
 
