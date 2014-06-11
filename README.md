@@ -15,7 +15,7 @@ Finally, here is what you can write right now.
 
 ```scala
 Await.result(
-  monadic[Future, List, Option] {
+  monadic[Future, Option] {
     val a = Future ( Some(9) )
     val b = Some(7)
     val c = 10
@@ -105,7 +105,7 @@ monadic[Toto] {
 
 ```scala
 Await.result(
-  monadic[Future, List, Option] {
+  monadic[Future, Option] {
     val a = Future ( Some(9) )
     val b = Some(7)
     val c = 10
