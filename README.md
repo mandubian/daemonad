@@ -8,7 +8,24 @@
 
 > This project is NOT yet stable, NOT very robust so use it at your own risks.
 
+<br/>
+## Here is what id does
 
+Finally, here is what you can write right now.
+
+```scala
+Await.result(
+  monadic[Future, List, Option] {
+    val a = Future ( Some(9) )
+    val b = Some(7)
+    val c = 10
+    if(snoop2(a) < 10) snoop1(b) + 10
+    else c
+  }, duration.Duration("1 second")
+) should equal (Some(17))
+```
+
+<br/>
 ## Motivations
 
 ### 1 - Experiment writing a very ugly Scala macro
@@ -83,9 +100,7 @@ val toto2: Toto[String] = monadic[Toto] {
 
 
 <br/>
-## Code Sample
-
-Finally, here is what you can write right now.
+## Back to code Sample
 
 ```scala
 Await.result(
