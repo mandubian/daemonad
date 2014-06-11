@@ -104,9 +104,9 @@ trait MonadUpstack extends DContext with MonadUtils {
   // None            => use tree as is
   // Some(EmptyTree) => nothing found
   // Some(tree)      => restack tree
-  def upstack(stack: Seq[TpeHelper], tree: Tree): Option[Tree] = {
+  def upstack(stack: List[TpeHelper], tree: Tree): Option[Tree] = {
 
-    def step(stack: Seq[TpeHelper], tpe: TpeHelper): Option[Tree] = {
+    def step(stack: List[TpeHelper], tpe: TpeHelper): Option[Tree] = {
 
       stack match {
         // empty type stack
@@ -117,7 +117,12 @@ trait MonadUpstack extends DContext with MonadUtils {
           // TPE <:< M
           if(tpe <:< stpe) None
           // TPE =!= M
-          else Some(EmptyTree)
+          else {
+            // TPE is simple type => upstack
+            if(tpe.tpe.typeArgs.isEmpty && !stpe.tpe.typeArgs.isEmpty) Some(monadPoint(stpe)(tree))
+            // else nothing can be done
+            else Some(EmptyTree)
+          }
 
         // M[T]
         case htpe :: ttpe :: Nil =>
@@ -128,7 +133,15 @@ trait MonadUpstack extends DContext with MonadUtils {
           // TPE <:< T
           else if(tpe <:< ttpe) Some(monadPoint(htpe)(tree))
           // TPE =!= M[T]
-          else Some(EmptyTree)
+          else {
+            val subtree = step(ttpe :: Nil, tpe)
+            subtree match {
+              case None    => None
+              case Some(s) =>
+                if(s.isEmpty) Some(EmptyTree)
+                else Some(monadPoint(htpe)(s))
+            }
+          }
 
         // M[N[...]]
         case htpe :: ttpes =>

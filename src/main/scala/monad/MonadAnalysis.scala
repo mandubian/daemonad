@@ -79,7 +79,8 @@ trait MonadAnalysis extends DAnalysis {
           reportUnsupportedMonadTpe(monadTpes, arg, TpeHelper(arg.tpe))
           if(firstSnoop.isEmpty) {
             val d = snoopDepth(tree)
-            if(d < firstDepth) {
+            println(s"D:$d firstd:$firstDepth")
+            if(d != firstDepth) {
               reportUnsupportedSnoop(tree, s"First call to `snoopX` is expected to be `snoop$firstDepth` and not `snoop${if(d==1) "" else d}`")
             }
             else { firstSnoop = Some(d) }

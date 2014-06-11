@@ -138,6 +138,13 @@ trait TransformUtils extends DContext {
     res
   }
 
+  def forceType(api: TypingTransformApi)(tree: Tree, tpe: Type): Tree = {
+    tree.setType(tpe match {
+      // eliminate constant type because not good as an Info
+      case ct: ConstantType => ct.typeSymbol.asType.toType
+      case t => t
+    })
+  }
 
   object name {
     val Snoop          = "Snoop"

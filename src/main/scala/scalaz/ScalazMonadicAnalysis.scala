@@ -27,7 +27,7 @@ trait ScalazMonadAnalysis extends MonadAnalysis with MonadUpstack {
     if(!upstackable(monadTpes, tree)) c.abort(tree.pos, s"Hey $tree of type ${tpe} isn't stackable to ${appliedTypes(monadTpes)}")
 
     (tpe +: tpe.allTypeArgs) foreach { arg =>
-      // HARDCODED CHECKING
+      // HARDCODED CHECKING <<<< TO BE MODIFIED
       if(arg <:< c.typeOf[_root_.scalaz.-\/[_]]) {
 
         c.abort(tree.pos, s"""

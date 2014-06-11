@@ -25,7 +25,7 @@ class DaemonadSpec extends FlatSpec with Matchers {
     override def map[A, B](fa: Future[A])(f: A ⇒ B) = fa map f
   }
 
-  //setAll(true)
+  setAll(false)
 
   "Daemonad" should "snoop1 on Future[Int]" in {
     Await.result(
@@ -52,7 +52,6 @@ class DaemonadSpec extends FlatSpec with Matchers {
       }, duration.Duration("1 second")
     )
   }
-
 
   it should "snoop1 on Future[Int] with if/then/else" in {
     def doit(t: Future[Int]): Future[Int] =
@@ -109,6 +108,7 @@ class DaemonadSpec extends FlatSpec with Matchers {
       }, duration.Duration("1 second")
     )
   }
+
 
   it should "snoop2 on Future[Option[Int]] with if/then/else" in {
     Await.result(
@@ -309,6 +309,24 @@ class DaemonadSpec extends FlatSpec with Matchers {
       (snoop1(read("1")), snoop1(read("2")))
     }("hello") should equal (Some("hello1", "hello2"))
 
+  }
+
+  it should "accept int in if/then/else" in {
+    Await.result(
+      monadic[Future, List, Option] {
+        val a = Future ( List( Some(5), Some(9) ) )
+        if(snoop3(a) < 6) 5
+        else 10
+      }, duration.Duration("1 second")
+    ) should equal (List(Some(5), Some(10)))
+  }
+
+  it should "accept returned int" in {
+    Await.result(
+      monadic[Future, List, Option] {
+        10
+      }, duration.Duration("1 second")
+    ) should equal (List(Some(10)))
   }
 
   /*it should """snoop2 on \/[String, Option[Int]]""" in {

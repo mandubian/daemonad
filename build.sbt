@@ -1,4 +1,4 @@
-scalaVersion := "2.11.0-RC1"
+scalaVersion := "2.11.0"
 
 // Uncomment to test with a locally built copy of Scala.
 // scalaHome := Some(file("/code/scala2/build/pack"))
@@ -11,7 +11,7 @@ name := "daemonad"
 version := "0.1.0-SNAPSHOT"
 
 libraryDependencies ++= Seq(
-  "org.scalaz"      %% "scalaz-core"            % "7.1.0-M6"                      ,
+  "org.scalaz"      %% "scalaz-core"            % "7.1.0-M7"                      ,
   "org.scala-lang"  %  "scala-reflect"          % scalaVersion.value  % "provided",
   "org.scala-lang"  %  "scala-compiler"         % scalaVersion.value  % "test"    ,
   "org.scalatest"   %  "scalatest_2.11"         % "2.1.3"             % "test"
@@ -25,7 +25,7 @@ scalacOptions in compile ++= Seq("-optimize", "-deprecation", "-unchecked", "-Xl
 
 scalacOptions in Test ++= Seq("-Yrangepos")
 
-scalacOptions in (Test, run) ++= Seq("-Yrangepos", "-Ddaemonad.debug=true")
+scalacOptions in (Test, run) ++= Seq("-Yrangepos" /*, "-Ddaemonad.debug=true"*/)
 
 javaOptions in console += "-Ddaemonad.debug=false"
 

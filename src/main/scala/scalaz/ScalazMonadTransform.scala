@@ -216,7 +216,7 @@ trait ScalazMonadTransform extends MonadTransform with ScalazMonadUtils with Sca
             }*/
 
           } else {
-            c.abort(c.enclosingPosition, s"Can't manage this Monad Stack $stack")
+            c.abort(c.enclosingPosition, s"""Can't manage this Monad Stack ${stack.reverse.mkString("[",",","]")}""")
           }
 
         // L[M[N]]

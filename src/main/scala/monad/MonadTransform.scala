@@ -93,16 +93,13 @@ trait MonadTransform
 
             val (monadTree, code, ib) = {
               val upstacked = upstack((tpeStack :+ ttpt), innerBlock)
-              // vprintln(s"-----> upstacked:"+upstacked)
+              vprintln(s"-----> upstacked:"+upstacked + "   --- innerBlock:"+innerBlock+ "    --- innerBlock.tpe:"+innerBlock.tpe)
               upstacked match {
                 // NOT UPSTACKABLE AT ALL
                 case Some(EmptyTree) =>
                   val code = q"""{ ($param) =>
                     ${splicer(innerBlock)}
                   }"""
-
-                  // VERY IMPORTANT TO RELOCATE OWNERS
-                  //innerBlock.changeOwner(value.owner, code.symbol)
 
                   (monadTMap(arg.tpe, innerBlock.tpe, constr(tpt))(refexpr)(code), code, innerBlock)
 
@@ -114,9 +111,6 @@ trait MonadTransform
                     ${constr(ctpe)(splicer(innerBlock))}
                   """
 
-                  // VERY IMPORTANT TO RELOCATE OWNERS
-                  // innerBlock.changeOwner(value.owner, code.symbol)
-
                   (monadTBind(arg.tpe, innerBlock.tpe, constr(tpt))(refexpr)(code), code, innerBlock)
 
                 // UPSTACKABLE
@@ -127,21 +121,21 @@ trait MonadTransform
                     ${constr(ctpe)(splicer(b))}
                   """
 
-                  // VERY IMPORTANT TO RELOCATE OWNERS
-                  // b.changeOwner(value.owner, code.symbol)
-
                   (monadTBind(arg.tpe, innerBlock.tpe, constr(tpt))(refexpr)(code), code, b)
               }
 
             }
+
             val block = api.typecheck(
               q"""{
                 ..$aliasTrees
                 ${extr(monadTree)}
               }"""
             )
+
+            // VERY IMPORTANT TO RELOCATE OWNERS (this is the tricky part)
             ib.changeOwner(value.owner, code.symbol)
-            //aliasTrees.foreach{ at => if(at.symbol != null) at.changeOwner( at.symbol.owner, block.symbol) }
+
             block
 
         }
@@ -156,46 +150,52 @@ trait MonadTransform
             resultTpeHelper, tree.symbol, tpt, arg, others
           )
 
-          //code.changeOwner(tree.symbol.owner, tree.symbol)
           val newValue = copyValChangeTpe(api)(tree, mods, value, code.tpe, code)
           val newValueRef = gen.mkAttributedStableRef(newValue.symbol).setType(code.tpe).setPos(tree.pos)
-
-          // println("-----------------------------------------")
-          // newValue.foreach{ tree => println(s"-----FOREACH---> t: $tree o:"+(if(tree.symbol != null) tree.symbol.owner else "null")) }
-
-          // symMap += (tree.symbol -> (q"$newValueRef" -> TpeHelper(code.tpe)))
           List(newValue, newValueRef)
-
-        /*case tree@q"$mods val $value: $tpt = if ($cond) $thenp else $elsep" =>
-          val tThen = listToBlock(transformSingle(thenp, List())) //listToBlock(transformSingle(thenp, List()))
-          val tElse = listToBlock(transformSingle(elsep, List()))
-          val tCond = api.recur(cond)
-          val tArg =  api.atOwner(tree.symbol)(treeCopy.If(tree, api.recur(cond), tThen, tElse).setType(tThen.tpe))
-          val newValue = copyValChangeTpe(api)(tree, mods, value, tThen.tpe, tArg)
-          val newValueRef = gen.mkAttributedStableRef(tree.symbol).setType(tThen.tpe).setPos(tree.pos)
-
-          // tArg.changeOwner(tree.symbol.owner, newValue.symbol)
-
-          symMap += (tree.symbol -> (q"$newValueRef" -> TpeHelper(tThen.tpe)))
-
-          List(newValue) ++ transformMultiple(others)*/
 
         case q"$mods val $value: $tpt = $arg" =>
           val tArg = arg match {
             case q"if ($cond) $thenp else $elsep" =>
-              val tThen = api.typecheck(q"..${transformSingle(thenp, List())}")
-              val tElse = api.typecheck(q"..${transformSingle(elsep, List())}")
+              // TODO choose better type than tThen.tpe using tElse.tpe
+              val tThen0 = api.typecheck(q"{ ..${transformSingle(thenp, List())} }")
+              val tThen = api.typecheck(upstack(monadTpeHelpers, tThen0) match {
+                // NOT UPSTACKABLE AT ALL
+                case Some(EmptyTree) | None => tThen0
+                case Some(c) => c
+              })
+              println("TTHEN:"+tThen.tpe)
+              val tElse0 = api.typecheck(q"{ ..${transformSingle(elsep, List())} }")
+              val tElse = api.typecheck(upstack(monadTpeHelpers, tElse0) match {
+                // NOT UPSTACKABLE AT ALL
+                case Some(EmptyTree) | None => tElse0
+                case Some(c) => c
+              })
+
               val tCond = api.recur(cond)
-              treeCopy.If(tree, tCond, tThen, tElse).setType(tThen.tpe)
+
+              forceType(api)(treeCopy.If(tree, tCond, tThen, tElse), tThen.tpe)
+
+            case q"$sel match { case ..$cases }" =>
+              val tSel = api.recur(sel)
+              val tCases = cases map {
+                case c@cq"$pat if $guard => $body" =>
+                  val tBody = api.typecheck(q"{ ..${transformSingle(body, List())} }")
+                  treeCopy.CaseDef(c, pat, guard, tBody)
+              }
+              treeCopy.Match(tree, tSel, tCases)
 
             case arg => api.recur(arg)
           }
 
           val newValue = copyValChangeTpe(api)(tree, mods, value, tArg.tpe, tArg)
-          val newValueRef = gen.mkAttributedStableRef(tree.symbol).setType(tArg.tpe).setPos(tree.pos)
-          symMap += (tree.symbol -> (q"$newValueRef" -> TpeHelper(tArg.tpe)))
+          val newValueRef = gen.mkAttributedStableRef(newValue.symbol).setType(tArg.tpe).setPos(tree.pos)
 
-          List(newValue) ++ transformMultiple(others)
+          symMap += (tree.symbol) -> (q"$newValueRef", TpeHelper(tArg.tpe))
+          val res = List(newValue) ++ transformMultiple(others)
+
+          // adds symbol to be replaced in other branches
+          res
 
 
         case Block(stats, expr) =>
@@ -203,20 +203,16 @@ trait MonadTransform
           val tOthers = transformMultiple(others)
           t ++ tOthers
 
-        case tree@If(cond, thenp, elsep) =>
+        /*case tree@If(cond, thenp, elsep) =>
           val tThen = listToBlock(transformSingle(thenp, List()))
           val tElse = listToBlock(transformSingle(elsep, List()))
-          treeCopy.If(tree, api.recur(cond), tThen, tElse).setType(tThen.tpe) +: transformMultiple(others)
+          treeCopy.If(tree, api.recur(cond), tThen, tElse).setType(tThen.tpe) +: transformMultiple(others)*/
 
         case e if (symMap contains e.symbol) =>
           val (p, tpeHelper) = symMap(e.symbol)
           p match {
-            case q"$_ val $value: $_ = $_" =>
-              treeCopy.Ident(p, value) +: transformMultiple(others)
-
-            // case q"$value" =>
-            //   println("-----> PPPPPP2:"+showRaw(p))
-            //   treeCopy.Ident(p, value.symbol.name) +: transformMultiple(others)
+            //case q"$_ val $value: $_ = $_" =>
+            //  treeCopy.Ident(p, value) +: transformMultiple(others)
 
             case tree =>
               val otherss = transformMultiple(others)
@@ -236,15 +232,22 @@ trait MonadTransform
       }
 
       transformSingle(tree, List()) match {
-        case List(e) => e
-        case t  => listToBlock(t)
+        case List(e)  => e
+        case t        => listToBlock(t)
       }
     }
 
+    val upstacked = upstack((monadTpeHelpers :+ resultTpeHelper), transformed)
+
+    upstacked match {
+      // NOT UPSTACKABLE AT ALL
+      case Some(EmptyTree) | None => transformed
+      case Some(c) => c
+    }
     //println("transformed:"+showRaw(transformed, printTypes = true, printKinds = true))
     //println("-----------------***------------------------")
     //transformed.foreach{ tree => println(s"-----FOREACH---> tree:$tree o:"+(if(tree != null && tree.symbol != null) tree.symbol.owner else "null")) }
-    transformed
+    //transformed
   }
 
 

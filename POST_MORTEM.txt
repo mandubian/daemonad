@@ -1,2 +1,8 @@
 - symbol not found in ... => think about changeOwner
 - not assigned to val => ConstantType used as a type
+
+
+- assertion failed => not well typed
+[error] java.lang.AssertionError: assertion failed
+[error]   at scala.Predef$.assert(Predef.scala:151)
+[error]   at scala.reflect.internal.Symbols$Symbol.info_$eq(Symbols.scala:1448)
