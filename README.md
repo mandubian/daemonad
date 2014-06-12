@@ -116,7 +116,7 @@ Await.result(
 ```
 
 - `monadic` marks the monadic block
-- `monadic[Future, List, Option]` declares that you manipulate a stack `Future[List[Option]]` (and no other)
+- `monadic[Future, List, Option]` declares that you manipulate a stack `Future[Option]` (and no other)
 - `snoopX` means that you want to snoop the monad value at X-th level (1, 2, 3, 4 and no more for now)
 - checks for implicit instances of monads (here `List`, `Option`, `Future`) and monad transformers (here `OptionT` & `ListT`) for this stack
 - translating this code into embedded `Monad.bind/point/lift/run`...
