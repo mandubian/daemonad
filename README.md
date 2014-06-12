@@ -164,7 +164,7 @@ Note that:
 
 - you have to use a type alias to Scalaz \/ to one parametric type.
 - you have to help a bit the compiler about type alias S or it will infer \/[A, B] which is not what we want for the monad. This might seem tedious but I'll study if I can go around this.
-- look at the result: you have a 2 elements list and at the end, you have a 8 elements list: WHAT???? No it's normal, this is the result `flatmap` between first and second and third list. 2*2*2 = 8... nothing strange but it can be surprising at first glance ;)
+- look at the result: you have a 2 elements list and at the end, you have a 8 elements list: WHAT???? No it's normal, this is the result `flatmap` between first and second and third list. 2^2^2 = 8... nothing strange but it can be surprising at first glance ;)
 
 ## TODO
 
